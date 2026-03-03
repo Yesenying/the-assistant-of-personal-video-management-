@@ -1,0 +1,181 @@
+"""
+搜索引擎模块
+使用 CLIP 模型实现图文语义搜索
+"""
+
+import torch
+import clip
+from PIL import Image
+import numpy as np
+from pathlib import Path
+from typing import List, Dict
+import chromadb
+from chromadb.config import Settings
+
+
+class SearchEngine:
+    """语义搜索引擎"""
+    
+    def __init__(self, db, model_name: str = "ViT-B/32"):
+        """
+        Args:
+            db: 数据库实例
+            model_name: CLIP 模型名称
+        """
+        self.db = db
+        
+        print("🔧 初始化搜索引擎...")
+        
+        # 加载 CLIP 模型
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        print(f"   设备: {device}")
+        print(f"   模型: {model_name}")
+        
+        self.device = device
+        self.model, self.preprocess = clip.load(model_name, device=device)
+        
+        # 初始化向量数据库
+        self.chroma_client = chromadb.Client(Settings(
+            chroma_db_impl="duckdb+parquet",
+            persist_directory="./data/chroma_db"
+        ))
+        
+        # 创建或获取 collection
+        self.collection = self.chroma_client.get_or_create_collection(
+            name="video_clips",
+            metadata={"description": "Video clip embeddings"}
+        )
+        
+        print("✅ 搜索引擎初始化完成")
+    
+    def encode_image(self, image_path: str) -> np.ndarray:
+        """
+        将图像编码为向量
+        
+        Args:
+            image_path: 图像路径
+        
+        Returns:
+            特征向量 (numpy array)
+        """
+        image = Image.open(image_path).convert('RGB')
+        image = self.preprocess(image).unsqueeze(0).to(self.device)
+        
+        with torch.no_grad():
+            image_features = self.model.encode_image(image)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+        
+        return image_features.cpu().numpy()[0]
+    
+    def encode_text(self, text: str) -> np.ndarray:
+        """
+        将文本编码为向量
+        
+        Args:
+            text: 文本内容
+        
+        Returns:
+            特征向量 (numpy array)
+        """
+        text_tokens = clip.tokenize([text]).to(self.device)
+        
+        with torch.no_grad():
+            text_features = self.model.encode_text(text_tokens)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+        
+        return text_features.cpu().numpy()[0]
+    
+    def index_clip(self, clip_id: str, thumbnail_path: str):
+        """
+        索引单个片段
+        
+        Args:
+            clip_id: 片段ID
+            thumbnail_path: 缩略图路径
+        """
+        if not Path(thumbnail_path).exists():
+            print(f"⚠️  缩略图不存在: {thumbnail_path}")
+            return
+        
+        # 生成图像 embedding
+        embedding = self.encode_image(thumbnail_path)
+        
+        # 存入 Chroma
+        self.collection.add(
+            embeddings=[embedding.tolist()],
+            ids=[clip_id]
+        )
+    
+    def index_video_clips(self, video_id: str):
+        """
+        索引视频的所有片段
+        
+        Args:
+            video_id: 视频ID
+        """
+        print(f"\n🔍 开始索引视频片段...")
+        clips = self.db.get_clips_by_video(video_id)
+        
+        for idx, clip in enumerate(clips):
+            self.index_clip(clip['clip_id'], clip['thumbnail_path'])
+            
+            if (idx + 1) % 10 == 0:
+                print(f"   进度: {idx + 1}/{len(clips)}")
+        
+        print(f"✅ 索引完成! 共 {len(clips)} 个片段")
+    
+    def search(self, query: str, top_k: int = 10) -> List[Dict]:
+        """
+        搜索相关片段
+        
+        Args:
+            query: 搜索关键词
+            top_k: 返回前 K 个结果
+        
+        Returns:
+            片段列表，包含相似度分数
+        """
+        print(f"\n🔎 搜索: '{query}'")
+        
+        # 文本编码
+        query_embedding = self.encode_text(query)
+        
+        # 向量搜索
+        results = self.collection.query(
+            query_embeddings=[query_embedding.tolist()],
+            n_results=top_k
+        )
+        
+        # 整合结果
+        search_results = []
+        if results['ids'] and len(results['ids'][0]) > 0:
+            for clip_id, distance in zip(results['ids'][0], results['distances'][0]):
+                # 从数据库获取完整信息
+                clip = self.db.get_clip(clip_id)
+                if clip:
+                    # 转换距离为相似度分数 (0-1)
+                    similarity = 1 - (distance / 2)  # cosine distance to similarity
+                    
+                    clip['similarity'] = round(similarity, 4)
+                    search_results.append(clip)
+        
+        print(f"✅ 找到 {len(search_results)} 个结果")
+        return search_results
+    
+    def reindex_all(self):
+        """重新索引所有片段"""
+        print("\n🔄 重新索引所有片段...")
+        
+        # 清空现有索引
+        self.chroma_client.delete_collection("video_clips")
+        self.collection = self.chroma_client.get_or_create_collection(
+            name="video_clips",
+            metadata={"description": "Video clip embeddings"}
+        )
+        
+        # 索引所有视频
+        videos = self.db.get_all_videos()
+        for video in videos:
+            self.index_video_clips(video['video_id'])
+        
+        print("✅ 重新索引完成")

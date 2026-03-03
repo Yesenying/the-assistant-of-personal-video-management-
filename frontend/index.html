@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人视频素材知识库</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        /* 搜索区域 */
+        .search-section {
+            margin-bottom: 40px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        /* 导入区域 */
+        .import-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .import-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        /* 统计信息 */
+        .stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            flex: 1;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #666;
+            margin-top: 5px;
+        }
+
+        /* 结果网格 */
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .clip-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .clip-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            border-color: #667eea;
+        }
+
+        .clip-thumbnail {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+
+        .clip-info {
+            padding: 15px;
+        }
+
+        .clip-time {
+            font-size: 0.9em;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .clip-similarity {
+            display: inline-block;
+            padding: 4px 10px;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .clip-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .clip-actions button {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+
+        .clip-actions button:hover {
+            background: #f5f5f5;
+        }
+
+        /* 加载状态 */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        /* 标签 */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+
+        .tag {
+            padding: 3px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                flex-direction: column;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🎬 个人视频素材知识库</h1>
+            <p class="subtitle">用关键词搜索，1分钟找到你要的画面</p>
+        </header>
+
+        <div class="main-content">
+            <!-- 导入视频 -->
+            <div class="import-section">
+                <textarea class="import-input" id="videoPath" rows="3"
+                    placeholder="一行一个视频路径（可批量粘贴）&#10;例如：&#10;/Users/xxx/a.mp4&#10;/Users/xxx/b.mp4"></textarea>
+
+                <button class="btn btn-secondary" onclick="importVideo()">导入视频</button>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="totalVideos">0</div>
+                    <div class="stat-label">视频数量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="totalClips">0</div>
+                    <div class="stat-label">片段数量</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="storageUsed">0 MB</div>
+                    <div class="stat-label">存储空间</div>
+                </div>
+            </div>
+
+            <!-- 搜索 -->
+            <div class="search-section">
+                <div class="search-box">
+                    <input type="text" class="search-input" id="searchInput" placeholder="描述你要找的画面，例如：雨夜屋顶拔刀、情绪爆发的场景..."
+                        onkeypress="handleSearchKeyPress(event)">
+                    <button class="btn btn-primary" onclick="searchClips()">🔍 搜索</button>
+                </div>
+            </div>
+
+            <!-- 结果区域 -->
+            <div id="resultsContainer">
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎥</div>
+                    <h3>开始你的视频素材管理之旅</h3>
+                    <p style="margin-top: 10px;">导入视频后，就可以使用关键词搜索片段了</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+
+        // 页面加载时获取统计信息
+        window.onload = function () {
+            loadStats();
+        };
+
+        // 加载统计信息
+        async function loadStats() {
+            try {
+                const response = await fetch(`${API_BASE}/stats`);
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('totalVideos').textContent = data.stats.total_videos;
+                    document.getElementById('totalClips').textContent = data.stats.total_clips;
+                    document.getElementById('storageUsed').textContent = data.stats.storage_used;
+                }
+            } catch (error) {
+                console.error('加载统计信息失败:', error);
+            }
+        }
+
+        // 导入视频
+        async function importVideo() {
+            const raw = document.getElementById('videoPath').value.trim();
+            if (!raw) {
+                alert('请输入视频文件路径（可多行）');
+                return;
+            }
+
+            // 一行一个路径
+            const paths = raw
+                .split('\n')
+                .map(s => s.trim())
+                .filter(Boolean);
+
+            showLoading(`正在导入 ${paths.length} 个视频，请稍候...`);
+
+            try {
+                const response = await fetch(`${API_BASE}/videos/import_batch`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ paths })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const msg = `✅ 批量导入完成：成功 ${data.ok}，失败 ${data.fail}`;
+                    alert(msg);
+                    document.getElementById('videoPath').value = '';
+                    loadStats();
+                    hideResults();
+                    console.log('batch import results:', data.results);
+                } else {
+                    alert('❌ 导入失败: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ 导入失败: ' + error.message);
+            }
+        }
+
+
+        // 搜索片段
+        async function searchClips() {
+            const query = document.getElementById('searchInput').value.trim();
+
+            if (!query) {
+                alert('请输入搜索关键词');
+                return;
+            }
+
+            showLoading('正在搜索...');
+
+            try {
+                const response = await fetch(`${API_BASE}/search`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, top_k: 12 })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResults(data.results);
+                } else {
+                    alert('❌ 搜索失败: ' + data.error);
+                    hideResults();
+                }
+            } catch (error) {
+                alert('❌ 搜索失败: ' + error.message);
+                hideResults();
+            }
+        }
+
+        // 显示加载状态
+        function showLoading(message) {
+            document.getElementById('resultsContainer').innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>${message}</p>
+                </div>
+            `;
+        }
+
+        // 隐藏结果
+        function hideResults() {
+            document.getElementById('resultsContainer').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">🎥</div>
+                    <h3>暂无结果</h3>
+                </div>
+            `;
+        }
+
+        // 显示搜索结果
+        function displayResults(results) {
+            const container = document.getElementById('resultsContainer');
+
+            if (results.length === 0) {
+                hideResults();
+                return;
+            }
+
+            const html = `
+                <h3 style="margin-bottom: 20px;">找到 ${results.length} 个相关片段</h3>
+                <div class="results-grid">
+                    ${results.map(clip => `
+                        <div class="clip-card" onclick="previewClip('${clip.clip_id}', ${clip.start_time}, ${clip.end_time})">
+                            <img src="${API_BASE}/clips/${clip.clip_id}/thumbnail" 
+                                 class="clip-thumbnail" 
+                                 alt="片段缩略图"
+                                 onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22><rect fill=%22%23ddd%22 width=%22300%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%23999%22>暂无缩略图</text></svg>'">
+                            <div class="clip-info">
+                                <div class="clip-time">
+                                    ${formatTime(clip.start_time)} - ${formatTime(clip.end_time)}
+                                </div>
+                                <div class="clip-similarity">
+                                    相似度: ${(clip.similarity * 100).toFixed(1)}%
+                                </div>
+                                <div class="clip-actions">
+  <button class="btn btn-secondary" onclick="downloadClip(event, '${clip.clip_id}')">下载片段</button>
+</div>
+                                ${clip.tags && clip.tags.length > 0 ? `
+                                    <div class="tags">
+                                        ${clip.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // 格式化时间
+        function formatTime(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+
+            if (h > 0) {
+                return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            }
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function downloadClip(evt, clipId) {
+            evt.stopPropagation();
+            // 直接打开下载链接即可（浏览器会下载）
+            window.open(`${API_BASE}/clips/${clipId}/download`, '_blank');
+        }
+
+
+        // 预览片段
+        // function previewClip(clipId) {
+        //alert(`片段 ID: ${clipId}\n点击后可跳转到原视频播放`);
+        // TODO: 实现视频播放功能
+        //}
+
+        let currentClip = { clipId: null, start: null, end: null };
+
+        async function previewClip(clipId, startTime, endTime) {
+            try {
+                // 1) 拉取 clip 详情（拿到 video_id 和 video_path / 或后端提供的播放地址）
+                const res = await fetch(`${API_BASE}/clips/${clipId}`);
+                const data = await res.json();
+                if (!data.success) {
+                    alert('❌ 获取片段详情失败: ' + (data.error || 'unknown'));
+                    return;
+                }
+
+                const clip = data.clip;
+
+                // 2) 你后端需要能“提供原视频文件给前端播放”
+                // 最推荐：后端加一个接口 /api/videos/<video_id>/stream 返回视频文件流
+                // 这里先假设你已经有 /api/videos/<video_id>/stream
+                const videoUrl = `${API_BASE}/videos/${clip.video_id}/file`;
+
+                // 3) 确保页面上有播放器容器（没有就插入一个）
+                let playerWrap = document.getElementById('playerWrap');
+                if (!playerWrap) {
+                    const container = document.getElementById('resultsContainer');
+                    playerWrap = document.createElement('div');
+                    playerWrap.id = 'playerWrap';
+                    playerWrap.style.margin = '20px 0';
+                    playerWrap.innerHTML = `
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px;">
+          <div id="clipTitle" style="font-weight:600;"></div>
+          <div style="display:flex; gap:8px;">
+            <button class="btn btn-secondary" onclick="replayCurrentClip()">重播片段</button>
+            <button class="btn btn-secondary" onclick="stopClip()">停止</button>
+          </div>
+        </div>
+        <video id="player" controls style="width:100%; border-radius:12px; background:#000;"></video>
+        <div id="clipHint" style="color:#666; margin-top:6px; font-size:13px;"></div>
+      `;
+                    container.prepend(playerWrap);
+                }
+
+                const v = document.getElementById('player');
+                document.getElementById('clipTitle').textContent =
+                    `播放片段：${formatTime(startTime)} - ${formatTime(endTime)}（${clipId.slice(0, 8)}...）`;
+                document.getElementById('clipHint').textContent =
+                    `到 ${formatTime(endTime)} 会自动暂停（只播放该片段）`;
+
+                // 4) 记录当前片段
+                currentClip = { clipId, start: startTime, end: endTime };
+
+                // 5) 绑定“到点自动停”
+                v.ontimeupdate = () => {
+                    if (currentClip.end != null && v.currentTime >= currentClip.end) {
+                        v.pause();
+                        // 你想停在 end 就不动；想回到 start 就取消注释：
+                        // v.currentTime = currentClip.start;
+                    }
+                };
+
+                // 6) 加载并跳到 start 播放
+                // 如果换了视频源，需要等待 metadata
+                const needReload = !v.src || !v.src.includes(`/videos/${clip.video_id}/stream`);
+                if (needReload) v.src = videoUrl;
+
+                v.onloadedmetadata = () => {
+                    v.currentTime = Math.max(0, startTime);
+                    v.play();
+                };
+
+                // 如果同一个视频源，metadata 已经加载过，就直接 seek & play
+                if (!needReload && v.readyState >= 1) {
+                    v.currentTime = Math.max(0, startTime);
+                    v.play();
+                }
+            } catch (e) {
+                alert('❌ 播放失败: ' + e.message);
+            }
+        }
+
+        function replayCurrentClip() {
+            const v = document.getElementById('player');
+            if (!v || currentClip.start == null) return;
+            v.currentTime = currentClip.start;
+            v.play();
+        }
+
+        function stopClip() {
+            const v = document.getElementById('player');
+            if (!v) return;
+            v.pause();
+        }
+
+
+        async function openPlayerModal(clipId) {
+            // 1) 拉 clip 详情拿 video_id + start_time
+            const resp = await fetch(`${API_BASE}/clips/${clipId}`);
+            const data = await resp.json();
+            if (!data.success) {
+                alert("❌ 获取片段详情失败: " + (data.error || "unknown"));
+                return;
+            }
+
+            const clip = data.clip;
+            const videoId = clip.video_id;
+            const startTime = Number(clip.start_time || 0);
+
+            // 2) 创建弹窗 + video 标签
+            const modalId = "playerModal";
+            const old = document.getElementById(modalId);
+            if (old) old.remove();
+
+            const modal = document.createElement("div");
+            modal.id = modalId;
+            modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; z-index: 9999;
+    `;
+
+            modal.innerHTML = `
+      <div style="width: min(960px, 92vw); background: white; border-radius: 12px; overflow: hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #eee;">
+          <div style="font-weight:600;">🎬 原视频播放（从 ${formatTime(startTime)} 开始）</div>
+          <button id="closePlayer" style="border:none; background:#f5f5f5; padding:6px 10px; border-radius:8px; cursor:pointer;">关闭</button>
+        </div>
+        <div style="padding: 12px;">
+          <video id="player" controls style="width:100%; max-height:70vh; background:#000;"
+                 src="${API_BASE}/videos/${videoId}/file"></video>
+        </div>
+      </div>
+    `;
+
+            document.body.appendChild(modal);
+
+            // 3) 关闭逻辑
+            modal.querySelector("#closePlayer").onclick = () => modal.remove();
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+            // 4) 跳转到 start_time
+            const player = modal.querySelector("#player");
+            player.addEventListener("loadedmetadata", () => {
+                try { player.currentTime = startTime; } catch { }
+                player.play().catch(() => { });
+            });
+        }
+
+        // 搜索框回车键支持
+        function handleSearchKeyPress(event) {
+            if (event.key === 'Enter') {
+                searchClips();
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>个人视频素材知识库</title>
+
+  <!--
+    ✅ UI v3 目标
+    - 更“产品化”的信息层级：App Shell（顶栏）+ 左侧工作台 + 主内容区
+    - 统一设计变量、间距、阴影、边框、字体
+    - Toast 替代 alert；更柔和的 Loading/Skeleton
+    - 结果区提供：排序、TopK、相似度阈值（前端过滤）、键盘可用性
+    - 播放器改为 Sticky 面板：选中后右侧固定显示（更像播放器 + 列表）
+  -->
+
+  <style>
+    :root{
+      --bg0:#0b1020;
+      --bg1:#0e1530;
+      --card:#ffffff;
+      --card2:#fbfbfe;
+      --muted:#6b7280;
+      --text:#0f172a;
+
+      --brand1:#667eea;
+      --brand2:#764ba2;
+      --brand3:#4f46e5;
+
+      --line:rgba(15,23,42,.10);
+      --line2:rgba(15,23,42,.14);
+
+      --shadow-lg:0 28px 70px rgba(2,6,23,.28);
+      --shadow-md:0 14px 32px rgba(2,6,23,.14);
+      --shadow-sm:0 8px 18px rgba(2,6,23,.10);
+
+      --r-xl:22px;
+      --r-lg:16px;
+      --r-md:12px;
+      --r-sm:10px;
+
+      --pad:18px;
+      --pad2:14px;
+      --pad3:10px;
+
+      --font: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      font-family:var(--font);
+      color:var(--text);
+      background:
+        radial-gradient(900px 600px at 12% 12%, rgba(102,126,234,.35), transparent 55%),
+        radial-gradient(800px 520px at 88% 18%, rgba(118,75,162,.35), transparent 60%),
+        linear-gradient(180deg, #0a1023 0%, #0a0f1f 55%, #0a0f1f 100%);
+      padding: 22px;
+    }
+
+    /* ---------- App shell ---------- */
+    .shell{
+      max-width: 1480px;
+      margin: 0 auto;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 14px;
+      padding: 16px 16px;
+      border-radius: var(--r-xl);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      color: rgba(255,255,255,.92);
+    }
+    .brand{
+      display:flex; align-items:center; gap:12px;
+      min-width: 0;
+    }
+    .logo{
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand1), var(--brand2));
+      box-shadow: 0 10px 24px rgba(102,126,234,.28);
+      display:grid; place-items:center;
+      font-weight: 900;
+    }
+    .brand h1{
+      font-size: 16px;
+      letter-spacing: .2px;
+      line-height: 1.15;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .brand p{
+      margin-top: 2px;
+      font-size: 12px;
+      opacity: .78;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .topbar-right{
+      display:flex; align-items:center; gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.14);
+      font-size: 12px;
+      color: rgba(255,255,255,.86);
+    }
+    .pill strong{ font-weight: 850; color: #fff; }
+    .ghost{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      color: rgba(255,255,255,.86);
+      cursor: pointer;
+      transition: .18s ease;
+      user-select:none;
+      text-decoration:none;
+    }
+    .ghost:hover{ transform: translateY(-1px); background: rgba(255,255,255,.10); }
+
+    /* ---------- Main layout ---------- */
+    .content{
+      margin-top: 18px;
+      display: grid;
+      grid-template-columns: 360px 1fr 420px;
+      gap: 16px;
+      align-items: start;
+    }
+
+    @media (max-width: 1180px){
+      .content{ grid-template-columns: 360px 1fr; }
+      .player-col{ grid-column: 1 / -1; }
+    }
+    @media (max-width: 860px){
+      body{ padding: 14px; }
+      .content{ grid-template-columns: 1fr; }
+      .left-col{ order: 1; }
+      .main-col{ order: 2; }
+      .player-col{ order: 3; }
+      .topbar{ padding: 14px; }
+    }
+
+    /* ---------- Cards ---------- */
+    .card{
+      background: rgba(255,255,255,.92);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--r-xl);
+      box-shadow: var(--shadow-lg);
+    }
+    .card-inner{
+      background: var(--card);
+      border-radius: var(--r-xl);
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .section{
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section:last-child{ border-bottom: none; }
+    .h2{
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      color: rgba(15,23,42,.90);
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .sub{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
+    /* ---------- Inputs / Buttons ---------- */
+    .input, .textarea, select{
+      width: 100%;
+      border: 1px solid var(--line2);
+      border-radius: 12px;
+      padding: 12px 12px;
+      outline: none;
+      font-size: 14px;
+      background: #fff;
+      transition: .16s ease;
+    }
+    .input:focus, .textarea:focus, select:focus{
+      border-color: rgba(79,70,229,.55);
+      box-shadow: 0 0 0 4px rgba(79,70,229,.14);
+    }
+    .textarea{
+      resize: vertical;
+      min-height: 110px;
+      max-height: 220px;
+      line-height: 1.45;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap: 8px;
+      padding: 11px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line2);
+      background: #fff;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      transition: .16s ease;
+      user-select:none;
+    }
+    .btn:hover{ transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+    .btn:active{ transform: translateY(0); box-shadow: none; }
+
+    .btn-primary{
+      border: none;
+      color: #fff;
+      background: linear-gradient(135deg, var(--brand1), var(--brand2));
+      box-shadow: 0 12px 26px rgba(102,126,234,.22);
+    }
+    .btn-primary:hover{ filter: brightness(1.02); }
+    .btn-soft{
+      background: rgba(79,70,229,.08);
+      border-color: rgba(79,70,229,.16);
+      color: rgba(79,70,229,.95);
+    }
+    .btn-danger{
+      background: rgba(239,68,68,.10);
+      border-color: rgba(239,68,68,.18);
+      color: rgba(220,38,38,.95);
+    }
+    .btn:disabled{
+      cursor: not-allowed;
+      opacity: .6;
+      transform:none;
+      box-shadow:none;
+    }
+
+    .row{ display:flex; gap: 10px; }
+    .row > *{ flex: 1; }
+    .row-compact{ display:flex; gap: 10px; align-items: center; }
+    .row-compact > .grow{ flex: 1; }
+
+    .kpi{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .kpi .box{
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: linear-gradient(135deg, #f5f7ff 0%, #f7f7ff 55%, #ffffff 100%);
+    }
+    .kpi .val{ font-size: 22px; font-weight: 950; color: rgba(79,70,229,.92); }
+    .kpi .lab{ margin-top: 2px; font-size: 12px; color: var(--muted); }
+
+    .divider{ height: 1px; background: var(--line); margin: 12px 0; }
+
+    /* ---------- Search / Toolbar ---------- */
+    .searchbar{
+      display:flex; gap: 10px;
+      align-items:center;
+    }
+    .searchbar .input{ padding: 13px 14px; }
+    .toolbar{
+      margin-top: 12px;
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: space-between;
+    }
+    .toolbar .group{
+      display:flex; gap: 10px; flex-wrap: wrap; align-items:center;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      font-size: 13px;
+      color: rgba(15,23,42,.80);
+    }
+    .chip label{ font-size: 12px; color: var(--muted); }
+    .chip input[type="range"]{ width: 160px; }
+
+    /* ---------- Results ---------- */
+    .results-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #fff 0%, #fbfbff 100%);
+    }
+    .results-head h3{
+      font-size: 14px;
+      font-weight: 950;
+      letter-spacing: .2px;
+    }
+    .results-head .meta{
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .grid{
+      padding: 16px;
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 540px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .clip{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow: hidden;
+      background: #fff;
+      display:grid;
+      grid-template-columns: 150px 1fr;
+      min-height: 118px;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+    .clip:hover{
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-sm);
+      border-color: rgba(79,70,229,.35);
+    }
+    .thumb{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #eef2ff;
+    }
+    .clip-body{
+      padding: 12px 12px;
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .clip-top{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .time{
+      font-weight: 950;
+      font-size: 13px;
+      color: rgba(79,70,229,.92);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .video-name{
+      font-size: 12px;
+      color: rgba(15,23,42,.74);
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .sim{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .bar{
+      width: 110px;
+      height: 8px;
+      background: rgba(15,23,42,.08);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .fill{
+      height: 100%;
+      background: linear-gradient(90deg, var(--brand1), var(--brand2));
+      border-radius: 999px;
+    }
+    .pct{
+      font-size: 12px;
+      font-weight: 950;
+      color: rgba(15,23,42,.86);
+      min-width: 50px;
+      text-align: right;
+    }
+
+    .tags{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .tag{
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: rgba(79,70,229,.08);
+      border: 1px solid rgba(79,70,229,.14);
+      color: rgba(79,70,229,.92);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .clip-actions{
+      margin-top: auto;
+      display:flex; gap: 8px;
+    }
+    .clip-actions .btn{
+      padding: 9px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      flex: 1;
+    }
+
+    /* ---------- Player (sticky) ---------- */
+    .sticky{
+      position: sticky;
+      top: 18px;
+    }
+    .player-wrap{
+      padding: 0;
+    }
+    .player-head{
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+    }
+    .player-title{
+      font-weight: 950;
+      font-size: 14px;
+    }
+    .player-sub{
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
+    .player-body{
+      padding: 14px 16px 16px;
+    }
+    video{
+      width: 100%;
+      border-radius: 16px;
+      background:#000;
+    }
+    .player-ops{
+      display:flex;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    /* ---------- Empty / Loading ---------- */
+    .empty{
+      padding: 48px 16px;
+      text-align:center;
+      color: rgba(15,23,42,.70);
+    }
+    .empty .icon{ font-size: 38px; }
+    .empty h3{ margin-top: 10px; font-size: 14px; font-weight: 950; }
+    .empty p{ margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+    .loading{
+      padding: 18px 16px 22px;
+    }
+    .skeleton{
+      display:grid;
+      grid-template-columns: 150px 1fr;
+      gap: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      overflow:hidden;
+      background: #fff;
+    }
+    .sk-thumb{
+      height: 120px;
+      background: linear-gradient(90deg, #eef2ff 0%, #f5f7ff 40%, #eef2ff 80%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+    .sk-body{ padding: 12px; }
+    .sk-line{
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #eef2ff 0%, #f5f7ff 40%, #eef2ff 80%);
+      background-size: 200% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+      margin-bottom: 10px;
+    }
+    .sk-line.sm{ width: 58%; }
+    .sk-line.md{ width: 78%; }
+    .sk-line.lg{ width: 92%; }
+
+    @keyframes shimmer{
+      0%{ background-position: 0% 0; }
+      100%{ background-position: -200% 0; }
+    }
+
+    /* ---------- Toast ---------- */
+    .toasts{
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 9999;
+      pointer-events: none;
+    }
+    .toast{
+      pointer-events: auto;
+      min-width: 260px;
+      max-width: 360px;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(17,24,39,.86);
+      color: rgba(255,255,255,.92);
+      box-shadow: var(--shadow-md);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      display:flex;
+      gap: 10px;
+      align-items:flex-start;
+      transform: translateY(4px);
+      opacity: 0;
+      animation: pop .18s ease forwards;
+    }
+    .toast .t-ic{ font-size: 16px; margin-top: 1px; }
+    .toast .t-title{ font-weight: 900; font-size: 13px; }
+    .toast .t-msg{ margin-top: 2px; font-size: 12px; opacity: .9; line-height: 1.35; }
+    .toast .t-x{
+      margin-left:auto;
+      border:none;
+      background: transparent;
+      color: rgba(255,255,255,.86);
+      cursor:pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 4px 6px;
+      border-radius: 10px;
+    }
+    .toast .t-x:hover{ background: rgba(255,255,255,.10); }
+    @keyframes pop{
+      to{ transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="shell">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">🎬</div>
+        <div style="min-width:0;">
+          <h1>个人视频素材知识库</h1>
+          <p>用关键词搜索，1分钟找到你要的画面</p>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <div class="pill">视频 <strong id="topTotalVideos">0</strong></div>
+        <div class="pill">片段 <strong id="topTotalClips">0</strong></div>
+        <div class="pill">存储 <strong id="topStorageUsed">0 MB</strong></div>
+        <a class="ghost" href="javascript:void(0)" onclick="focusSearch()">⌘K 搜索</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Left: Workbench -->
+      <div class="left-col card">
+        <div class="card-inner">
+          <div class="section">
+            <div class="h2">导入视频 <span style="font-weight:800;color:var(--muted)">批量</span></div>
+            <div class="sub">一行一个路径；建议从 Finder/资源管理器复制绝对路径。</div>
+            <div style="margin-top:10px;">
+              <textarea class="textarea" id="videoPath" placeholder="/Users/xxx/a.mp4&#10;/Users/xxx/b.mp4"></textarea>
+            </div>
+            <div class="row" style="margin-top:10px;">
+              <button class="btn btn-soft" onclick="pasteFromClipboard()">📋 粘贴</button>
+              <button class="btn btn-primary" onclick="importVideo()">导入</button>
+            </div>
+          </div>
+
+          <div class="section">
+            <div class="h2">统计概览</div>
+            <div class="kpi">
+              <div class="box">
+                <div class="val" id="totalVideos">0</div>
+                <div class="lab">视频数量</div>
+              </div>
+              <div class="box">
+                <div class="val" id="totalClips">0</div>
+                <div class="lab">片段数量</div>
+              </div>
+              <div class="box" style="grid-column:1 / -1;">
+                <div class="val" id="storageUsed">0 MB</div>
+                <div class="lab">存储空间</div>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="row">
+              <button class="btn" onclick="loadStats(true)">🔄 刷新</button>
+              <button class="btn btn-danger" onclick="clearResults()">🧹 清空结果</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main: Search + Results -->
+      <div class="main-col card">
+        <div class="card-inner">
+          <div class="section">
+            <div class="h2">搜索片段</div>
+
+            <div class="searchbar">
+              <input
+                class="input"
+                id="searchInput"
+                placeholder="描述你要找的画面，例如：雨夜屋顶拔刀、情绪爆发的场景..."
+                onkeydown="handleSearchKeyDown(event)"
+              />
+              <button class="btn btn-primary" onclick="searchClips()">🔎 搜索</button>
+            </div>
+
+            <div class="toolbar">
+              <div class="group">
+                <div class="chip">
+                  <label>TopK</label>
+                  <select id="topKSelect" onchange="onTopKChange()">
+                    <option value="8">8</option>
+                    <option value="12" selected>12</option>
+                    <option value="20">20</option>
+                    <option value="30">30</option>
+                  </select>
+                </div>
+
+                <div class="chip">
+                  <label>排序</label>
+                  <select id="sortSelect" onchange="renderCurrentResults()">
+                    <option value="sim_desc" selected>相似度 ↓</option>
+                    <option value="sim_asc">相似度 ↑</option>
+                    <option value="time_asc">起始时间 ↑</option>
+                    <option value="time_desc">起始时间 ↓</option>
+                  </select>
+                </div>
+
+                <div class="chip" title="前端过滤，不影响后端返回">
+                  <label>阈值</label>
+                  <input id="simThreshold" type="range" min="0" max="100" value="0" step="1" oninput="onThresholdChange()" />
+                  <span id="simThresholdText" style="font-weight:900;">0%</span>
+                </div>
+              </div>
+
+              <div class="group">
+                <button class="btn btn-soft" onclick="demoQuery()">✨ 示例</button>
+                <button class="btn" onclick="exportQuery()">📎 复制查询</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="resultsArea">
+            <div class="empty">
+              <div class="icon">🎥</div>
+              <h3>开始你的视频素材管理之旅</h3>
+              <p>导入视频后，用关键词搜索片段。点击卡片即可在右侧播放。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Player -->
+      <div class="player-col card sticky">
+        <div class="card-inner player-wrap">
+          <div class="player-head">
+            <div class="player-title" id="playerTitle">播放器</div>
+            <div class="player-sub" id="playerSub">选择一个片段后，这里会固定播放该片段（到结束时间自动暂停）。</div>
+          </div>
+          <div class="player-body">
+            <video id="player" controls></video>
+            <div class="player-ops">
+              <button class="btn btn-soft" onclick="replayCurrentClip()">⟲ 重播</button>
+              <button class="btn" onclick="stopClip()">⏸ 停止</button>
+              <button class="btn" id="downloadBtn" onclick="downloadCurrentClip()" disabled>⬇ 下载</button>
+            </div>
+            <div class="divider"></div>
+            <div class="sub" id="playerHint">提示：点击结果卡片或按 Enter 搜索。按 Esc 停止播放。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast container -->
+  <div class="toasts" id="toasts"></div>
+
+  <script>
+    const API_BASE = 'http://localhost:5000/api';
+
+    // ----- State -----
+    let currentClip = { clipId: null, start: null, end: null, videoId: null };
+    let lastResults = [];
+    let lastQuery = '';
+    let lastFetchMs = 0;
+
+    window.onload = function(){
+      loadStats();
+      initHotkeys();
+      updateThresholdText();
+    };
+
+    function initHotkeys(){
+      // ⌘K / Ctrl+K -> focus search
+      window.addEventListener('keydown', (e) => {
+        const isMac = navigator.platform.toLowerCase().includes('mac');
+        if ((isMac && e.metaKey && e.key.toLowerCase() === 'k') || (!isMac && e.ctrlKey && e.key.toLowerCase() === 'k')){
+          e.preventDefault();
+          focusSearch();
+        }
+        // Esc -> stop
+        if (e.key === 'Escape'){
+          stopClip();
+        }
+      });
+    }
+
+    function focusSearch(){
+      const el = document.getElementById('searchInput');
+      el.focus();
+      el.select();
+    }
+
+    // ----- Toast -----
+    function toast(type, title, msg, ms = 2600){
+      const map = {
+        success: "✅",
+        info: "ℹ️",
+        warn: "⚠️",
+        error: "❌"
+      };
+      const node = document.createElement('div');
+      node.className = 'toast';
+      node.innerHTML = `
+        <div class="t-ic">${map[type] || "ℹ️"}</div>
+        <div>
+          <div class="t-title">${escapeHtml(title || '')}</div>
+          <div class="t-msg">${escapeHtml(msg || '')}</div>
+        </div>
+        <button class="t-x" aria-label="关闭">×</button>
+      `;
+      const box = document.getElementById('toasts');
+      box.appendChild(node);
+
+      const close = () => {
+        node.style.opacity = '0';
+        node.style.transform = 'translateY(6px)';
+        setTimeout(() => node.remove(), 140);
+      };
+      node.querySelector('.t-x').onclick = close;
+      setTimeout(close, ms);
+    }
+
+    function escapeHtml(str){
+      return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+    }
+
+    // ----- Stats -----
+    async function loadStats(showToast){
+      try{
+        const res = await fetch(`${API_BASE}/stats`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'stats error');
+
+        const { total_videos, total_clips, storage_used } = data.stats;
+        document.getElementById('totalVideos').textContent = total_videos;
+        document.getElementById('totalClips').textContent = total_clips;
+        document.getElementById('storageUsed').textContent = storage_used;
+
+        document.getElementById('topTotalVideos').textContent = total_videos;
+        document.getElementById('topTotalClips').textContent = total_clips;
+        document.getElementById('topStorageUsed').textContent = storage_used;
+
+        if (showToast) toast('success', '已刷新', '统计信息已更新');
+      }catch(e){
+        console.error(e);
+        toast('error', '加载失败', '统计信息加载失败，请检查后端服务是否运行');
+      }
+    }
+
+    // ----- Import -----
+    async function pasteFromClipboard(){
+      try{
+        if (!navigator.clipboard?.readText) throw new Error('clipboard not supported');
+        const text = await navigator.clipboard.readText();
+        const ta = document.getElementById('videoPath');
+        ta.value = (ta.value ? ta.value + '\n' : '') + text.trim();
+        toast('success', '已粘贴', '已从剪贴板粘贴路径');
+      }catch(e){
+        toast('warn', '无法粘贴', '浏览器未授权剪贴板，手动粘贴即可');
+      }
+    }
+
+    async function importVideo(){
+      const raw = document.getElementById('videoPath').value.trim();
+      if (!raw){
+        toast('warn', '缺少路径', '请输入视频文件路径（可多行）');
+        return;
+      }
+
+      const paths = raw.split('\n').map(s => s.trim()).filter(Boolean);
+      if (!paths.length){
+        toast('warn', '缺少路径', '没有可导入的路径');
+        return;
+      }
+
+      renderLoading(`正在导入 ${paths.length} 个视频...`);
+
+      try{
+        const res = await fetch(`${API_BASE}/videos/import_batch`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ paths })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'import error');
+
+        toast('success', '导入完成', `成功 ${data.ok}，失败 ${data.fail}`);
+        document.getElementById('videoPath').value = '';
+        loadStats();
+        clearResults(false);
+      }catch(e){
+        console.error(e);
+        toast('error', '导入失败', e.message || '导入失败');
+        clearResults(false);
+      }
+    }
+
+    // ----- Search -----
+    function handleSearchKeyDown(e){
+      if (e.key === 'Enter'){
+        e.preventDefault();
+        searchClips();
+      }
+    }
+
+    function onTopKChange(){
+      if (lastQuery) searchClips();
+    }
+
+    function onThresholdChange(){
+      updateThresholdText();
+      renderCurrentResults();
+    }
+    function updateThresholdText(){
+      const v = Number(document.getElementById('simThreshold').value || 0);
+      document.getElementById('simThresholdText').textContent = `${v}%`;
+    }
+
+    function demoQuery(){
+      const samples = [
+        "雨夜屋顶拔刀",
+        "情绪爆发的争吵",
+        "主角回头的特写",
+        "城市夜景与霓虹",
+        "黑暗走廊追逐"
+      ];
+      const pick = samples[Math.floor(Math.random()*samples.length)];
+      document.getElementById('searchInput').value = pick;
+      toast('info', '示例已填充', `可以直接搜索：${pick}`);
+      focusSearch();
+    }
+
+    async function exportQuery(){
+      const q = (document.getElementById('searchInput').value || '').trim();
+      if (!q){
+        toast('warn', '没有内容', '请输入或生成一个搜索词再复制');
+        return;
+      }
+      try{
+        await navigator.clipboard.writeText(q);
+        toast('success', '已复制', q);
+      }catch(_){
+        toast('info', '复制失败', '浏览器未授权，手动复制即可');
+      }
+    }
+
+    async function searchClips(){
+      const query = (document.getElementById('searchInput').value || '').trim();
+      if (!query){
+        toast('warn', '请输入关键词', '例如：雨夜屋顶拔刀、情绪爆发的场景');
+        return;
+      }
+
+      const topK = Number(document.getElementById('topKSelect').value || 12);
+
+      renderLoading('正在搜索匹配片段...');
+      const t0 = performance.now();
+
+      try{
+        const res = await fetch(`${API_BASE}/search`,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ query, top_k: topK })
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'search error');
+
+        lastResults = Array.isArray(data.results) ? data.results : [];
+        lastQuery = query;
+        lastFetchMs = Math.max(0, Math.round(performance.now() - t0));
+
+        if (!lastResults.length){
+          renderEmpty('没有找到结果', '换个描述试试：加入人物/动作/场景/情绪关键词。');
+          toast('info', '无结果', '建议换一种描述方式或更具体的关键词');
+          return;
+        }
+
+        renderCurrentResults();
+        toast('success', '搜索完成', `找到 ${lastResults.length} 条（耗时 ${lastFetchMs}ms）`);
+      }catch(e){
+        console.error(e);
+        renderEmpty('搜索失败', '请检查后端服务、网络或控制台错误信息。');
+        toast('error', '搜索失败', e.message || 'search failed');
+      }
+    }
+
+    function renderLoading(message){
+      document.getElementById('resultsArea').innerHTML = `
+        <div class="results-head">
+          <div>
+            <h3>${escapeHtml(message || '加载中...')}</h3>
+            <div class="meta">正在请求后端并渲染结果</div>
+          </div>
+        </div>
+        <div class="loading">
+          <div class="grid" style="padding:0;">
+            ${Array.from({length:6}).map(() => `
+              <div class="skeleton">
+                <div class="sk-thumb"></div>
+                <div class="sk-body">
+                  <div class="sk-line lg"></div>
+                  <div class="sk-line md"></div>
+                  <div class="sk-line sm"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEmpty(title, desc){
+      document.getElementById('resultsArea').innerHTML = `
+        <div class="empty">
+          <div class="icon">🧩</div>
+          <h3>${escapeHtml(title || '暂无结果')}</h3>
+          <p>${escapeHtml(desc || '请先导入视频，然后使用关键词搜索片段')}</p>
+        </div>
+      `;
+    }
+
+    function clearResults(showToast = true){
+      lastResults = [];
+      lastQuery = '';
+      lastFetchMs = 0;
+      renderEmpty('已清空结果', '输入关键词并点击搜索，即可再次检索。');
+      if (showToast) toast('success', '已清空', '结果区域已重置');
+    }
+
+    // ----- Similarity helpers -----
+// 后端 similarity 可能是 [-1, 1]（如 cosine similarity），为了更直观展示：
+// - 展示百分比/阈值使用映射后的 [0,1]： (sim + 1) / 2
+// - 排序仍沿用原始 similarity（保持后端语义）
+function sim01(sim){
+  const s = Number(sim);
+  if (Number.isNaN(s)) return 0;
+  // clamp to [-1,1] then map to [0,1]
+  const cl = Math.max(-1, Math.min(1, s));
+  return (cl + 1) / 2;
+}
+
+// ----- Render results with sorting & threshold -----
+    function renderCurrentResults(){
+      const sortMode = document.getElementById('sortSelect').value;
+      const threshold = Number(document.getElementById('simThreshold').value || 0) / 100;
+
+      let rows = [...(lastResults || [])];
+
+      // filter by threshold
+      rows = rows.filter(r => sim01(r.similarity) >= threshold);
+
+      // sorting
+      rows.sort((a,b) => {
+        const sa = a.similarity || 0, sb = b.similarity || 0;
+        const ta = a.start_time || 0, tb = b.start_time || 0;
+        if (sortMode === 'sim_desc') return sb - sa;
+        if (sortMode === 'sim_asc') return sa - sb;
+        if (sortMode === 'time_asc') return ta - tb;
+        if (sortMode === 'time_desc') return tb - ta;
+        return 0;
+      });
+
+      if (!rows.length){
+        renderEmpty('被阈值过滤掉了', '降低阈值或换更具体的关键词。');
+        return;
+      }
+
+      const topLine = lastQuery ? `关键词：${lastQuery}` : '';
+      document.getElementById('resultsArea').innerHTML = `
+        <div class="results-head">
+          <div>
+            <h3>找到 ${rows.length} 个相关片段</h3>
+            <div class="meta">${escapeHtml(topLine)}${topLine ? ' · ' : ''}耗时 ${lastFetchMs}ms</div>
+          </div>
+          <div class="meta">点击卡片播放 · 右侧自动暂停于片段结束</div>
+        </div>
+        <div class="grid">
+          ${rows.map(clip => renderClipCard(clip)).join('')}
+        </div>
+      `;
+
+      // attach error fallback for thumbnails
+      document.querySelectorAll('img[data-thumb="1"]').forEach(img => {
+        img.onerror = () => {
+          img.src = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22300%22 height=%22200%22><rect fill=%22%23eef2ff%22 width=%22300%22 height=%22200%22/><text x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 fill=%22%236b7280%22 font-family=%22Arial%22 font-size=%2216%22>暂无缩略图</text></svg>';
+        };
+      });
+    }
+
+    function renderClipCard(clip){
+      const clipId = clip.clip_id;
+      const start = Number(clip.start_time || 0);
+      const end = Number(clip.end_time || 0);
+
+      const simPct = Math.max(0, Math.min(100, sim01(clip.similarity) * 100));
+      const videoName = getVideoNameFromClip(clip);
+      const tags = Array.isArray(clip.tags) ? clip.tags : [];
+
+      return `
+        <div class="clip" role="button" tabindex="0"
+          onclick="previewClip('${clipId}', ${start}, ${end})"
+          onkeydown="if(event.key==='Enter'){ previewClip('${clipId}', ${start}, ${end}); }">
+          <img class="thumb" data-thumb="1"
+            src="${API_BASE}/clips/${clipId}/thumbnail"
+            alt="片段缩略图" />
+          <div class="clip-body">
+            <div class="clip-top">
+              <div class="time">${formatTime(start)} - ${formatTime(end)}</div>
+              <div class="sim" title="相似度">
+                <div class="bar"><div class="fill" style="width:${simPct.toFixed(1)}%"></div></div>
+                <div class="pct">${simPct.toFixed(1)}%</div>
+              </div>
+            </div>
+
+            <div class="video-name" title="${escapeHtml(videoName)}">${escapeHtml(videoName)}</div>
+
+            ${tags.length ? `
+              <div class="tags">
+                ${tags.slice(0,6).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('')}
+                ${tags.length > 6 ? `<span class="tag">+${tags.length-6}</span>` : ``}
+              </div>
+            ` : ``}
+
+            <div class="clip-actions">
+              <button class="btn btn-soft" onclick="event.stopPropagation(); previewClip('${clipId}', ${start}, ${end})">播放</button>
+              <button class="btn" onclick="downloadClip(event, '${clipId}')">下载</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function formatTime(seconds){
+      const sec = Math.max(0, Number(seconds || 0));
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    function getVideoNameFromClip(clip){
+      if (clip.video_name) return clip.video_name;
+      if (clip.video_path){
+        try{
+          const parts = String(clip.video_path).split(/[\\/]/);
+          return parts[parts.length-1] || clip.video_path;
+        }catch(_){}
+      }
+      if (clip.video_id) return `video_${String(clip.video_id).slice(0,8)}...`;
+      return '未知视频';
+    }
+
+    // ----- Playback -----
+    async function previewClip(clipId, startTime, endTime){
+      try{
+        const res = await fetch(`${API_BASE}/clips/${clipId}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'clip detail error');
+
+        const clip = data.clip;
+        const videoUrl = `${API_BASE}/videos/${clip.video_id}/file`;
+
+        const v = document.getElementById('player');
+        const title = `片段：${formatTime(startTime)} - ${formatTime(endTime)}`;
+        document.getElementById('playerTitle').textContent = title;
+        document.getElementById('playerSub').textContent = `ID: ${clipId.slice(0,8)}... · 视频：${getVideoNameFromClip(clip)}`;
+        document.getElementById('playerHint').textContent = `到 ${formatTime(endTime)} 自动暂停（只播放该片段）`;
+
+        currentClip = { clipId, start: startTime, end: endTime, videoId: clip.video_id };
+
+        // enable download
+        const dl = document.getElementById('downloadBtn');
+        dl.disabled = false;
+
+        v.ontimeupdate = () => {
+          if (currentClip.end != null && v.currentTime >= currentClip.end){
+            v.pause();
+          }
+        };
+
+        const needReload = !v.src || !v.src.includes(`/videos/${clip.video_id}/file`);
+        if (needReload) v.src = videoUrl;
+
+        const seekAndPlay = () => {
+          v.currentTime = Math.max(0, startTime);
+          v.play().catch(() => {});
+        };
+
+        if (needReload){
+          v.onloadedmetadata = seekAndPlay;
+        } else if (v.readyState >= 1){
+          seekAndPlay();
+        } else {
+          v.onloadedmetadata = seekAndPlay;
+        }
+
+        toast('info', '开始播放', `${formatTime(startTime)} → ${formatTime(endTime)}`);
+      }catch(e){
+        console.error(e);
+        toast('error', '播放失败', e.message || '无法播放该片段');
+      }
+    }
+
+    function replayCurrentClip(){
+      const v = document.getElementById('player');
+      if (!v || currentClip.start == null) return;
+      v.currentTime = currentClip.start;
+      v.play().catch(() => {});
+    }
+
+    function stopClip(){
+      const v = document.getElementById('player');
+      if (!v) return;
+      v.pause();
+    }
+
+    function downloadClip(evt, clipId){
+      evt.stopPropagation();
+      window.open(`${API_BASE}/clips/${clipId}/download`, '_blank');
+    }
+
+    function downloadCurrentClip(){
+      if (!currentClip.clipId) return;
+      window.open(`${API_BASE}/clips/${currentClip.clipId}/download`, '_blank');
+    }
+  </script>
+</body>
+</html>
