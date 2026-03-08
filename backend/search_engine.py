@@ -1,16 +1,14 @@
 """
 搜索引擎模块
-使用 sentence-transformers 实现图文语义搜索
-- 支持：对每个 clip 读取多帧缩略图 clip_XXXX_f*.jpg，做 embedding 聚合（mean）
+使用 Chinese-CLIP 实现图文语义搜索
+- 支持：对每个 clip 读取多帧缩略图 clip_XXXX_f*.jpg，做 embedding 聚合（mean / GeM）
 """
 
-from sentence_transformers import SentenceTransformer
 from PIL import Image
 import numpy as np
 from pathlib import Path
 from typing import List, Dict
 import chromadb
-from PIL import Image
 import torch
 from transformers import AutoProcessor, ChineseCLIPModel
 
@@ -190,7 +188,7 @@ class SearchEngine:
     #             "frames_used": len(paths)
     #         }]
     #     )
-    def index_clip(self, clip_id: str, thumbnail_path: str, extra_meta: dict | None = None):
+    def index_clip(self, clip_id: str, thumbnail_path: str, extra_meta: Dict[str, object] | None = None):
         """
         索引单个片段：多帧 -> clip/video 级 embedding（GeM pooling）-> 写入 Chroma
         """
@@ -243,7 +241,7 @@ class SearchEngine:
 
     # ---------- search ----------
 
-    def search(self, query: str, top_k: int = 10, fetch_k: int = 300, use_mmr: bool = True, mmr_lambda: float = 0.78) -> List[Dict]:
+    def search(self, query: str, top_k: int = 10, fetch_k: int = 300, use_mmr: bool = True, mmr_lambda: float = 0.78) -> List[Dict[str, object]]:
         """
         顶配 Step1：
         - 先 fetch_k 大召回

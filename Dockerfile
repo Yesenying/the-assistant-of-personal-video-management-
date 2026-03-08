@@ -41,4 +41,5 @@ ENV FLASK_APP=backend.app
 EXPOSE 5000
 
 # 启动命令
-CMD ["python", "-m", "backend.app"]
+# 这里用脚本方式启动，确保 backend 目录在 sys.path 内（避免 app.py 里的本地 import 报错）
+CMD ["python", "backend/app.py"]
