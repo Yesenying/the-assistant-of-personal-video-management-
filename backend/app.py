@@ -20,15 +20,20 @@ import re
 app = Flask(__name__)
 CORS(app)
 
-# 配置
-BASE_DIR = Path(__file__).parent.parent
-DATA_DIR = BASE_DIR / "data"
-CLIPS_DIR = BASE_DIR / "clips"
+# 配置（支持环境变量覆盖）
+BASE_DIR = Path(os.environ.get("APP_BASE_DIR", Path(__file__).parent.parent))
+DATA_DIR = Path(os.environ.get("APP_DATA_DIR", BASE_DIR / "data"))
+CLIPS_DIR = Path(os.environ.get("APP_CLIPS_DIR", BASE_DIR / "clips"))
 DB_PATH = DATA_DIR / "video_library.db"
 
 # 确保目录存在
-DATA_DIR.mkdir(exist_ok=True)
-CLIPS_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+CLIPS_DIR.mkdir(parents=True, exist_ok=True)
+
+# 打印配置（调试用）
+print(f"📂 BASE_DIR: {BASE_DIR}")
+print(f"📂 DATA_DIR: {DATA_DIR}")
+print(f"📂 CLIPS_DIR: {CLIPS_DIR}")
 
 # 初始化组件
 db = Database(str(DB_PATH))
