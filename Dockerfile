@@ -22,8 +22,8 @@ COPY requirements.txt .
 
 # 安装 Python 依赖（使用清华源，添加超时重试）
 RUN pip install --no-cache-dir --timeout 300 -r requirements.txt \
-    -i https://pypi.tuna.tsinghua.edu.cn/simple \
-    --trusted-host pypi.tuna.tsinghua.edu.cn
+    -i https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com
 
 # 预下载模型（避免启动时下载，如果失败不影响构建）
 RUN python -c "from transformers import AutoProcessor, ChineseCLIPModel; \
